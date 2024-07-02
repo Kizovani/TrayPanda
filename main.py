@@ -76,7 +76,7 @@ def get_ipconfig_info():
 
 def twenty_twenty_twenty_timer():
     while True:
-        time.sleep(1)
+        time.sleep(20*60)
         icon.notify("20-20-20 Rule!", "TrayPanda")
         time.sleep(25)  # added five seconds to account for reading the notification
 
