@@ -1,7 +1,5 @@
-# TODO: add weather app, and see if you can make it show up in the actual taskbar? And also see if you can make it
-# automatically send alerts if the weather conditions get really bad, maybe make it ping for weather every couple mins?
-# and add a manual refresh button to check weather, but make sure extreme alert only comes up when the app is not
-# focused
+# TODO: Basic IPConfig working, but I want to also add public ip adress and ping time to 8.8.8.8, which probably should
+# start timing itself before everything else to allow for max time, and possibly also wait for it to finish if needed
 
 # TODO: add a regular click mode, and add some sort of setting for "on regular click, do foo", that way user will not
 # need to right click then left click for what they want if its just one thing
@@ -20,6 +18,7 @@ import threading  # dont think ill need this for now, but should look into using
 import psutil
 import socket
 import ping3
+import time
 
 # for info on api for quotes: https://forismatic.com/en/api/
 
@@ -40,6 +39,8 @@ def get_quote():
         return f"Error: {e}"
 
 
+# Max notification size in windows is limited to 4 lines, will probably make a separate page for this, also, default
+# gateway is not working lol
 def get_ipconfig_info():
     try:
         info = psutil.net_if_addrs()
@@ -73,6 +74,18 @@ def get_ipconfig_info():
         return f"Error: {e}"
 
 
+def twenty_twenty_twenty_timer():
+    while True:
+        time.sleep(1)
+        icon.notify("20-20-20 Rule!", "TrayPanda")
+        time.sleep(25)  # added five seconds to account for reading the notification
+
+
+def start_timer():
+    timer_thread = threading.Thread(target=twenty_twenty_twenty_timer())
+    timer_thread.daemon = True  # Terminate the thread when main program stops
+    timer_thread.start()
+
 
 # icon is the tray icon and item what is clicked
 def on_clicked(icon, item):
@@ -80,11 +93,15 @@ def on_clicked(icon, item):
         icon.notify(get_quote(), "Quote of the day!")
     elif item.text == "IPConfig Info":
         icon.notify(get_ipconfig_info(), "IPConfig Info")
+    elif item.text == "Start 20-20-20 Timer":
+        start_timer()
 
 
 icon = pystray.Icon("Bamboo", image, menu=pystray.Menu(
     pystray.MenuItem("Random Quote", on_clicked),
-    pystray.MenuItem("IPConfig Info", on_clicked)
+    pystray.MenuItem("IPConfig Info", on_clicked),
+    # Add a new menu item for starting the timer
+    pystray.MenuItem("Start 20-20-20 Timer", on_clicked)
 ), HAS_NOTIFICATION=True)
 
 icon.run()
