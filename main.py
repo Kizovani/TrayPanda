@@ -18,6 +18,7 @@ import PIL.Image
 import requests
 import threading  # dont think ill need this for now, but should look into using it when app gets big
 import psutil
+import socket
 import ping3
 
 # for info on api for quotes: https://forismatic.com/en/api/
@@ -42,18 +43,21 @@ def get_quote():
 def get_ipconfig_info():
     try:
         info = psutil.net_if_addrs()
-        net_io = psutil.net_io_counters(pernic=True)
+        stats = psutil.net_if_stats()
         ping_time = ping3.ping('8.8.8.8')
 
-        # Assuming the first active adapter is the main/connected adapter
-        main_adapter = next((name for name in info if info[name][0].family == psutil.AF_INET), None)
-        if main_adapter:
-            ipv4 = next((addr.address for addr in info[main_adapter] if addr.family == psutil.AF_INET), 'N/A')
-            ipv6 = next((addr.address for addr in info[main_adapter] if addr.family == psutil.AF_INET6), 'N/A')
+        # Filter out the loopback and non-active interfaces
+        active_interfaces = [name for name, stat in stats.items() if
+                             stat.isup and name != 'Loopback Pseudo-Interface 1']
+
+        if active_interfaces:
+            main_adapter = active_interfaces[0]
+            ipv4 = next((addr.address for addr in info[main_adapter] if addr.family == socket.AF_INET), 'N/A')
+            ipv6 = next((addr.address for addr in info[main_adapter] if addr.family == socket.AF_INET6), 'N/A')
             mac = next((addr.address for addr in info[main_adapter] if addr.family == psutil.AF_LINK), 'N/A')
-            netmask = next((addr.netmask for addr in info[main_adapter] if addr.family == psutil.AF_INET), 'N/A')
-            broadcast = next((addr.broadcast for addr in info[main_adapter] if addr.family == psutil.AF_INET), 'N/A')
-            gateway = psutil.net_if_stats()[main_adapter].isup
+            netmask = next((addr.netmask for addr in info[main_adapter] if addr.family == socket.AF_INET), 'N/A')
+            broadcast = next((addr.broadcast for addr in info[main_adapter] if addr.family == socket.AF_INET), 'N/A')
+            gateway = 'N/A'  # Default gateway logic can be added here if necessary
 
             return (f"Adapter: {main_adapter}\n"
                     f"IPv4: {ipv4}\n"
@@ -61,12 +65,13 @@ def get_ipconfig_info():
                     f"MAC: {mac}\n"
                     f"Netmask: {netmask}\n"
                     f"Broadcast: {broadcast}\n"
-                    f"Default Gateway: {'Up' if gateway else 'Down'}\n"
+                    f"Default Gateway: {gateway}\n"
                     f"Ping Time (to 8.8.8.8): {ping_time * 1000:.2f} ms")
         else:
             return "No active network adapters found."
     except Exception as e:
         return f"Error: {e}"
+
 
 
 # icon is the tray icon and item what is clicked
